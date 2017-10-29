@@ -1,0 +1,110 @@
+#import dataset
+import numpy as np
+import pandas as pd
+
+board_game=pd.read_csv('board_game.csv')
+board_game_industry=pd.read_csv('board_game_industry.csv')
+
+#overview the data
+board_game.shape
+board_game.isnull().sum()
+board_game.dtypes
+
+#Data Preposessing
+bg_processed=board_game
+column_dropped2=['min_time','max_time','image_url']
+bg_processed=bg_processed.drop(column_dropped2, axis=1)
+list(bg_processed)
+
+#visualize the industrial market 
+import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt; plt.rcdefaults()
+
+board_game_industry.plot(x='year',y='game_published',kind='line')
+plt.show()
+
+#examine linearity
+bg_processed.plot(x='avg_rating', y='rank',kind='scatter')
+bg_processed.plot(x='geek_rating', y='avg_rating',kind='scatter')
+plt.show()
+
+#split category into several columns
+df1 = bg_processed.iloc[:,0:11]
+df2=bg_processed.iloc[:,11].str.split(', ', expand=True)
+df2.isnull().sum()
+df2_reduced=df2.iloc[:,0:1]
+df2_clean = df2_reduced.apply(lambda x:x.fillna(x.value_counts().index[0]))
+df2_clean.isnull().sum()
+df2_clean=df2_clean.rename(columns = {0:'mechanic'})
+df3=bg_processed.iloc[:,12]
+df4=bg_processed.iloc[:,13].str.split(', ', expand=True)
+df4.isnull().sum()
+df4_reduced=df4.iloc[:,0:2]
+df4_clean = df4_reduced.apply(lambda x:x.fillna(x.value_counts().index[0]))
+df4_clean.isnull().sum()
+df5=bg_processed.iloc[:,14:]
+bg_clean=pd.concat([df1,df2_clean,df3,df4_clean,df5], axis=1)
+
+bg_clean=bg_clean.drop(['names','designer'], axis=1)
+bg_data=bg_clean.rename(columns = {0:'category1',1:'category2'})
+bg_data.head()
+bg_data.shape
+bg_data.isnull().sum()
+bg_data.to_csv('board_game_cleaned',sep='\t',encoding='utf-8',index=False)
+
+#visualization of combination of different elements
+import seaborn as sb
+import sklearn
+
+from pandas import Series, DataFrame
+from pylab import rcParams
+from sklearn import preprocessing
+from sklearn.linear_model import LogisticRegression
+from sklearn.cross_validation import train_test_split
+from sklearn import metrics 
+from sklearn.metrics import classification_report
+
+board_game=pd.read_csv('board_game_cleaned.csv',encoding='UTF-8')
+board_game.shape
+board_game.isnull().sum()
+board_game.dtypes
+
+board_game["mechanic"] = board_game["mechanic"].astype('category')
+board_game["category1"] = board_game["category1"].astype('category')
+board_game["category2"] = board_game["category2"].astype('category')
+board_game.dtypes
+board_game=board_game.drop('category2', axis=1)
+
+data1=board_game.groupby(['category1'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data1=data1.sort_values('avg_rating', ascending=False)[0:15]
+data1.plot(x="category1", y='avg_rating', kind='bar')
+plt.show()
+
+data2=board_game.groupby(['min_players'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data2.plot(x="min_players", y='avg_rating', kind='line')
+
+data3=board_game.groupby(['max_players'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data3.plot(x="max_players", y='avg_rating', kind='line')
+plt.show()
+
+data4=board_game.groupby(['avg_time'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data4.plot(x="avg_time", y='avg_rating', kind='line')
+plt.show()
+
+data5=board_game.groupby(['age'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data5.plot(x="age", y='avg_rating', kind='line')
+plt.show()
+
+data6=board_game[['weight','avg_rating']]
+data6=data6.round({'weight':0})
+data6=data6.groupby(['weight'], as_index=False).avg_rating.agg({'avg_rating': np.mean})
+data6.plot(x="weight", y='avg_rating', kind='line')
+plt.show()
+
+#one-hot encoding for model
+board_game["mechanic_encoded"] = board_game["mechanic"].cat.codes
+board_game["category1_encoded"] = board_game["category1"].cat.codes
+board_game.head()
+
+board_game_dummy=pd.get_dummies(board_game, columns=["mechanic_encoded", "category1_encoded"], prefix=["mechanic", "category1"])
+
